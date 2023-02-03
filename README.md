@@ -4,7 +4,7 @@ Isogenicz is an adapted version of the DrugZ software from the Hart Lab, below t
 IsogenicZ analyzes parallel isogenic CRISPR screens for synthetic lethal interactions.  
 
 ```
-usage: isogenicz.py [-h] [-i sgRNA_count.txt] [-o drugz-output.txt]  
+usage: isogenicz.py [-h] [-i sgRNA_count.txt] [-o isogenicz-output.txt]  
                 [-f drugz-foldchange.txt] -c wildtype samples t0 -d wildtype samples endpoint
                 -x mutant samples t0 -y mutant samples endpoint
                 [-r remove genes] [-p pseudocount] [-I INDEX_COLUMN]  
