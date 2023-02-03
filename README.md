@@ -1,5 +1,5 @@
 # IsogenicZ
-Isogenicz, an adapted version of the DrugZ software from the Hart Lab, below the DrugZ readme.md edited where appropriate: 
+Isogenicz is an adapted version of the DrugZ software from the Hart Lab, below the DrugZ readme.md edited where appropriate: 
   
 IsogenicZ analyzes parallel isogenic CRISPR screens for synthetic lethal interactions.  
 
@@ -47,4 +47,4 @@ python isogenicz.py -i elof1_in.txt -o elof1_out.txt -c WTt0_1,WTt0_2,WTt0_3 -d 
 
 File elof1_in.txt contains the t0 and t12 counts from the screens of the RPE-1 iCas9 cell line ("WT") and the derived ELOF1 knockout line ("MUT"), see publication: Nat Cell Biol. 2021 Jun;23(6):595-607. doi: 10.1038/s41556-021-00688-9
 
-
+Performing analysis using these parameters as input will create elof1_out.txt as an output file, with results as in elof1_out_example.txt
