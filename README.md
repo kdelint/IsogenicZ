@@ -41,9 +41,9 @@ TGCGCTGGACCAGTGCGCGG	A1CF	213	186	251	272	159	285	167	206	138	190	206	253
 AACAGCCACACTCACAGCGA	A2M	475	664	642	547	552	501	632	644	622	758	701	529
 (etc)
 ```
-Usage from command line, assuming python 3 with numpy and pandas is installed and python is added to path:
+Usage from command line, assuming python 3 with numpy and pandas is installed:
 ```
-python isogenicz.py -i elof1_in.txt -o elof1_out.txt -c WTt0_1,WTt0_2,WTt0_3 -d WTt4_1,WTt4_2,WTt4_3 -x MUTt0_1,MUTt0_2,MUTt0_3 -y MUTt4_1,MUTt4_2,MUTt4_3
+python isogenicz.py -i elof1_in.txt -o elof1_out.txt -c WTt0_1,WTt0_2,WTt0_3 -d WTt12_1,WTt12_2,WTt12_3 -x MUTt0_1,MUTt0_2,MUTt0_3 -y MUTt12_1,MUTt12_2,MUTt12_3
 ```
 File elof1_in.txt contains the t0 and t12 counts from the screens of the RPE-1 iCas9 cell line ("WT") and the derived ELOF1 knockout line ("MUT"), see publication: Nat Cell Biol. 2021 Jun;23(6):595-607. doi: 10.1038/s41556-021-00688-9
 
