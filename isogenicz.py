@@ -1,42 +1,56 @@
 #!/usr/bin/env python
-#VERSION = "1.1.0.2"
-#BUILD   = 116
+
+#VERSION = "1.0.0"
 
 #---------------------------------
-# DRUGZ:  Identify drug-gene interactions in paired sample genomic perturbation screens
-# Special thanks to Matej Usaj
-# Last modified 20 April 2021
-# Free to modify and redistribute according to the MIT License:
 
-#MIT License
+# IsogenicZ is an adaptation of DrugZ to analyze parallel isogenic screens.
+# Instead of analyzing paired treated/untreated end-point samples, artificial
+# end-point samples are created by normalizing to the corresponding t=0 samples
+# to correct for sampling error introduced at transduction.
 
-#Copyright (c) 2018 hart-lab
+# Special thanks to İdil Kırdök for help with Python!
 
-#Permission is hereby granted, free of charge, to any person obtaining a copy
-#of this software and associated documentation files (the "Software"), to deal
-#in the Software without restriction, including without limitation the rights
-#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-#copies of the Software, and to permit persons to whom the Software is
-#furnished to do so, subject to the following conditions:
+# Additions to the original DrugZ code by Klaas de Lint, February 2023
+# Original licence:
 
-#The above copyright notice and this permission notice shall be included in all
-#copies or substantial portions of the Software.
+    #---------------------------------
+    # DRUGZ:  Identify drug-gene interactions in paired sample genomic perturbation screens
+    # Special thanks to Matej Usaj
+    # Last modified 20 April 2021
+    # Free to modify and redistribute according to the MIT License:
 
-#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-#SOFTWARE.
-#---------------------------------
+    #MIT License
 
+    #Copyright (c) 2018 hart-lab
+
+    #Permission is hereby granted, free of charge, to any person obtaining a copy
+    #of this software and associated documentation files (the "Software"), to deal
+    #in the Software without restriction, including without limitation the rights
+    #to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    #copies of the Software, and to permit persons to whom the Software is
+    #furnished to do so, subject to the following conditions:
+
+    #The above copyright notice and this permission notice shall be included in all
+    #copies or substantial portions of the Software.
+
+    #THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    #IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    #FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    #AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    #LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    #SOFTWARE.
 
 # ------------------------------------
 # python modules
 # ------------------------------------
+
+import time
+
+start = time.time()
+
 import sys
-import six
 
 import numpy as np
 import pandas as pd
@@ -48,23 +62,20 @@ import logging as log
 log.basicConfig(level=log.INFO)
 log_ = log.getLogger(__name__)
 
-
 pd.options.mode.chained_assignment = None
 # default='warn' - printing a warning message
 # None - ignoring the warning
 # "raise" - raising an exception
 
 # ------------------------------------
-# constants
-norm_value  = 1e7
-min_reads_thresh = 1
+# Reads per sample normalization value
+norm_value = 1e7
 # ------------------------------------
-
 
 def load_reads(filepath, index_column, genes_to_remove):
     """
     Load the input file (raw reads counts - guide level)
-    and remove guides targerting control genes
+    and remove guides targeting control genes
     :param filepath: The path to the file to be loaded
     :param index_column: The column to use as an index (guide IDs)
     :param genes_to_remove: A string of comma separated control gene names
@@ -83,31 +94,60 @@ def load_reads(filepath, index_column, genes_to_remove):
     else:
         return reads
 
-
-def normalize_readcounts(reads, treatment, control):
+def normalize_readcounts(reads, treatment0, treatment, control0, control):
     """
-    Normalise input read counts using the global variable norm_value
-    :param reads: Dataframe containing reads counts (guide level)
-    :param treatment: List of columns names for the samples in the treatment group
-    :param control: List of column names for the samples in the control group
-    :return: normalised_counts: A dataframe containing normalised read counts
+    First normalize input read counts using the global variable norm_value with an added pseudocount of 0.1
+    Then normalize samples by multiplying (wildtype t0 + mutant t0) by the endpoint/t0 per sample
+    Finally normalize all samples to norm_value
+    :param reads: Dataframe containing read counts (guide level)
+    :param treatment: List of columns names for the end point samples in the treatment (mutant) group
+    :param treatment0: List of columns names for the t=0 samples in the treatment (mutant) group
+    :param control: List of column names for the end point samples in the control (wildtype) group
+    :param control0: List of column names for the t=0 samples in the control (wildtype) group
+    :return: normalized_counts: A dataframe containing normalized read counts
     """
 
-    reads_to_normalize = reads[control + treatment]
+    reads_to_prenormalize = reads[control + control0 + treatment + treatment0]
 
-    # Normalize raw read counts using norm_value (1e7)
+    # Prenormalize raw read counts to norm_value, with added 0.1 pseudocount to avoid /0 at fold-change calculations
+    no_of_guides = reads.shape[0]
+    prenorm_value = norm_value - (no_of_guides * 0.1)
+    prenormalized_counts = ((prenorm_value * reads_to_prenormalize) / reads_to_prenormalize.sum().values) + 0.1
+    # Make empty dataframe
+    reads_to_normalize = pd.DataFrame()
+    
+    num_replicates = len(control0)
 
+    for i in range(num_replicates):
+        replicate = i
+        
+        # For one replicate, get one column from each sample group to be used in normalization 
+        control_t0_rep = prenormalized_counts[control0[replicate]]
+        control_end_rep = prenormalized_counts[control[replicate]]
+        mut_t0_rep = prenormalized_counts[treatment0[replicate]]
+        mut_end_rep = prenormalized_counts[treatment[replicate]]
+
+        # Normalize the control sample and the treatment sample to shared t=0
+        control_rep = (control_t0_rep + mut_t0_rep) * (control_end_rep / control_t0_rep)
+        mut_rep = (control_t0_rep + mut_t0_rep) * (mut_end_rep / mut_t0_rep)
+
+        # Add the columns to dataframe isonorm_counts
+        reads_to_normalize[control[replicate]] = control_rep
+        reads_to_normalize[treatment[replicate]] = mut_rep
+
+    # Normalize adjusted read counts using norm_value (1e7)
     normalized_counts = (norm_value * reads_to_normalize) / reads_to_normalize.sum().values
+    
     return normalized_counts
 
 def calculate_fold_change(reads, normalized_counts, control_samples, treatment_samples, pseudocount, replicate):
     """
     Create a dataframe with index as guide ids
-    Calculate log2 ratio (foldchange) between treated and control reads
+    Calculate log2 ratio (foldchange) between treated (mutant) and control (wildtype) reads
     :param reads: Dataframe containing read counts (guide level)
     :param normalized_counts: Dataframe containing normalized read counts
-    :param control_samples: List of control sample names
-    :param treatment_samples: List of treated sample names
+    :param control_samples: List of control (wildtype) sample names
+    :param treatment_samples: List of treated (mutant) sample names
     :param pseudocount: Constant value added to all reads (default 5) - prevents log(0) problems
     :return: A dataframe with calculated foldchange for each replicate and
     initialized columns for guide estimated variance and z-score
@@ -120,8 +160,7 @@ def calculate_fold_change(reads, normalized_counts, control_samples, treatment_s
     fc_replicate_id = 'fc_{replicate}'.format(replicate=replicate)
     fc_zscore_id = 'zscore_' + fc_replicate_id
     empirical_bayes_id = 'eb_std_{replicate}'.format(replicate=replicate)
-    one_based_idx = replicate + 1
-
+    
     # Get the control and treatment sample ids for each replicate
     control_sample = control_samples[replicate]
     treatment_sample = treatment_samples[replicate]
@@ -137,11 +176,10 @@ def calculate_fold_change(reads, normalized_counts, control_samples, treatment_s
     fold_change[empirical_bayes_id] = np.zeros(no_of_guides)
     fold_change[fc_zscore_id] = np.zeros(no_of_guides)
 
-    # Calculate the log2 ratio of treatment normalised read counts to control - foldchange
+    # Calculate the log2 ratio of treatment normalized read counts to control - foldchange
     fold_change[fc_replicate_id] = np.log2((normalized_counts[treatment_sample] + pseudocount) / (normalized_counts[control_sample] + pseudocount))
 
     return fold_change
-
 
 def empirical_bayes(fold_change, half_window_size, no_of_guides, fc_replicate_id, empirical_bayes_id, fc_zscore_id):
     """
@@ -192,14 +230,13 @@ def empirical_bayes(fold_change, half_window_size, no_of_guides, fc_replicate_id
 
     return fold_change, fc_zscore_id
 
-
 def calculate_drugz_score(fold_change, min_observations, columns):
     """
     Calculate per gene statistics for the zscores aggregated across all comparisons
     The summed zscores and the number of observations for each gene are first aggregated. These zscores are then
-    normalised and pvalue estimates (assuming guassian distribution), rank position, and FDR are calculated
-    The statistics are first (with normalised zscores ranked smallest to largest) to identify synthetic
-    interactions and then (with normalised zscores now ranked largest to smallest) to identify suppressor interactions
+    normalized and pvalue estimates (assuming guassian distribution), rank position, and FDR are calculated
+    The statistics are first (with normalized zscores ranked smallest to largest) to identify synthetic
+    interactions and then (with normalized zscores now ranked largest to smallest) to identify suppressor interactions
     :param fold_change: Data frame containing calculated zscores per comparison
     :param min_observations: An integer value to act as a threshold for the minimum number observations to be included
     in the analysis (default=1)
@@ -224,8 +261,8 @@ def calculate_drugz_score(fold_change, min_observations, columns):
     # Calcualte normalized gene z-score by:
     # 1. normalizing the sumZ values by number of observations,
     # 2. renormalizing these values to fit uniform distribution of null p-vals
-    normalised_z_scores = stats.zscore(per_gene_results['sumZ'] / np.sqrt(per_gene_results['numObs']))
-    per_gene_results['normZ'] = normalised_z_scores
+    normalized_z_scores = stats.zscore(per_gene_results['sumZ'] / np.sqrt(per_gene_results['numObs']))
+    per_gene_results['normZ'] = normalized_z_scores
 
     # Sort the data frame by normZ (ascending) to highlight synthetic interactions
     per_gene_results.sort_values('normZ', ascending=True, inplace=True)
@@ -282,19 +319,23 @@ def write_drugZ_output(outfile, output):
 def get_args():
     """ Parse user giver arguments"""
 
-    parser = argparse.ArgumentParser(description='DrugZ for chemogenetic interaction screens',
+    parser = argparse.ArgumentParser(description='IsogenicZ for synthetic lethal interaction screens',
                                      epilog='dependencies: pylab, pandas')
     parser._optionals.title = "Options"
     parser.add_argument("-i", dest="infile", type=argparse.FileType('r'), metavar="sgRNA_count.txt",
                         help="sgRNA readcount file", default=sys.stdin)
-    parser.add_argument("-o", dest="drugz_output_file", type=argparse.FileType('w'), metavar="drugz-output.txt",
-                        help="drugz output file", default=sys.stdout)
-    parser.add_argument("-f", dest="fc_outfile", type=argparse.FileType('w'), metavar="drugz-foldchange.txt",
-                        help="drugz normalized foldchange file (optional")
-    parser.add_argument("-c", dest="control_samples", metavar="control samples", required=True,
-                        help="control samples, comma delimited")
-    parser.add_argument("-x", dest="drug_samples", metavar="drug samples", required=True,
-                        help="treatment samples, comma delimited")
+    parser.add_argument("-o", dest="drugz_output_file", type=argparse.FileType('w'), metavar="IsogenicZ-output.txt",
+                        help="IsogenicZ output file", default=sys.stdout)
+    parser.add_argument("-f", dest="fc_outfile", type=argparse.FileType('w'), metavar="foldchange.txt",
+                        help="normalized foldchange file (optional)")
+    parser.add_argument("-c", dest="control_samples0", metavar="wildtype samples t0", required=True,
+                        help="wildtype samples t0, comma delimited")
+    parser.add_argument("-d", dest="control_samples", metavar="wildtype samples endpoint", required=True,
+                        help="wildtype samples endpoint, comma delimited")
+    parser.add_argument("-x", dest="drug_samples0", metavar="mutant samples t0", required=True,
+                        help="mutant samples t0, comma delimited")
+    parser.add_argument("-y", dest="drug_samples", metavar="mutant samples end point", required=True,
+                        help="mutant samples endpoint, comma delimited")
     parser.add_argument("-r", dest="remove_genes", metavar="remove genes", help="genes to remove, comma delimited")
     parser.add_argument("-p", dest="pseudocount", type=int, metavar="pseudocount", help="pseudocount (default=5)",
                         default=5)
@@ -309,8 +350,6 @@ def get_args():
     parser.add_argument("-unpaired", dest="unpaired", action='store_true', default=False,
                         help='comparison status, paired (default) or unpaired')
     return parser.parse_args()
-
-
 
 def calculate_unpaired_foldchange(reads, normalized_counts, control_samples, treatment_samples, pseudocount):
     """
@@ -332,16 +371,15 @@ def calculate_unpaired_foldchange(reads, normalized_counts, control_samples, tre
     fold_change['eb_std'] = np.zeros(normalized_counts.shape[0])
     fold_change['zscore'] = np.zeros(normalized_counts.shape[0])
 
-
     return fold_change
 
 def calculate_drugz_score_unpaired(per_gene_matrix, min_observations):
     """
     Calculate per gene statistics for the zscores aggregated across comparisons from unpaired approach
     The summed zscores and the number of observations for each gene are first aggregated. These zscores are then
-    normalised and pvalue estimates (assuming guassian distribution), rank position, and FDR are calculated
-    The statistics are first (with normalised zscores ranked smallest to largest) to identify synthetic
-    interactions and then (with normalised zscores now ranked largest to smallest) to identify suppressor interactions
+    normalized and pvalue estimates (assuming guassian distribution), rank position, and FDR are calculated
+    The statistics are first (with normalized zscores ranked smallest to largest) to identify synthetic
+    interactions and then (with normalized zscores now ranked largest to smallest) to identify suppressor interactions
     :param per_gene_matrix: Data frame containing per gene aggregated zscores
     :param min_observations: An integer value to act as a threshold for the minimum number observations to be included
     in the analysis (default=1)
@@ -356,8 +394,8 @@ def calculate_drugz_score_unpaired(per_gene_matrix, min_observations):
     # Calcualte normalized gene z-score by:
     # 1. normalizing the sumZ values by number of observations,
     # 2. renormalizing these values to fit uniform distribution of null p-vals
-    normalised_z_scores = stats.zscore(per_gene_results['sumZ'] / np.sqrt(per_gene_results['numObs']))
-    per_gene_results['normZ'] = normalised_z_scores
+    normalized_z_scores = stats.zscore(per_gene_results['sumZ'] / np.sqrt(per_gene_results['numObs']))
+    per_gene_results['normZ'] = normalized_z_scores
 
     # Sort the data frame by normZ (ascending) to highlight synthetic interactions
     per_gene_results.sort_values('normZ', ascending=True, inplace=True)
@@ -388,27 +426,28 @@ def drugZ_analysis(args):
     """
 
     log_.info("Initiating analysis")
-
+    
+    control_samples0 = args.control_samples0.split(',')
     control_samples = args.control_samples.split(',')
+    treatment_samples0 = args.drug_samples0.split(',')
     treatment_samples = args.drug_samples.split(',')
+    
 
     if args.remove_genes == None:
         remove_genes = []
     else:
         remove_genes = args.remove_genes.split(',')
 
-
-
+    log_.debug("Control samples t0:"+ str(control_samples0))
     log_.debug("Control samples:"+ str(control_samples))
-    log_.debug("Treated samples:"+ str(treatment_samples))
-
+    log_.debug("Mutant samples t0:"+ str(treatment_samples0))
+    log_.debug("Mutant samples:"+ str(treatment_samples))
 
     log_.info("Loading the read count matrix")
     reads = load_reads(filepath=args.infile, index_column=0, genes_to_remove=remove_genes)
     no_of_guides = reads.shape[0]
 
-
-    normalized_counts = normalize_readcounts(reads=reads, control=control_samples,treatment=treatment_samples )
+    normalized_counts = normalize_readcounts(reads=reads, control=control_samples, control0=control_samples0, treatment=treatment_samples, treatment0=treatment_samples0 )
     log_.info("Normalizing read counts")
     num_replicates = len(control_samples)
     fc_zscore_ids = list()
@@ -431,6 +470,9 @@ def drugZ_analysis(args):
 
         log_.info('Writing output file unpaired results')
         write_drugZ_output(outfile=args.drugz_output_file, output=gene_normZ2)
+        
+        tot_time = str(round((time.time()-start),2))
+        log_.info('Completed in {0} seconds'.format(tot_time))
 
     elif len(control_samples) != len(treatment_samples) and args.unpaired == False:
         log_.error("Must have the same number of control and drug samples to run the paired approach")
@@ -449,11 +491,11 @@ def drugZ_analysis(args):
                                           empirical_bayes_id='eb_std_{replicate}'.format(replicate=i),
                                           fc_zscore_id='zscore_fc_{replicate}'.format(replicate=i))
 
-            log_.info('Caculating smoothed Empirical Bayes estimates of stdev for replicate {0}'.format(i+1))
+            log_.info('Calculating smoothed Empirical Bayes estimates of stdev for replicate {0}'.format(i+1))
 
             fold_changes.append(fold_change)
 
-            log_.info('Caculating guide-level Zscores for replicate {0}'.format(i+1))
+            log_.info('Calculating guide-level Zscores for replicate {0}'.format(i+1))
             fc_zscore_ids.append(fc_zscore_id)
             fold_change =pd.concat(fold_changes, axis=1, sort=False)
             fold_change = fold_change.loc[:,~fold_change.columns.duplicated()]
@@ -462,11 +504,15 @@ def drugZ_analysis(args):
             with args.fc_outfile as fold_change_file:
                 fold_change.to_csv(fold_change_file, sep='\t', float_format='%4.3f')
 
-        log_.info('Caculating gene-level Zscores')
+        log_.info('Calculating gene-level Zscores')
         gene_normZ = calculate_drugz_score(fold_change=fold_change, min_observations=1, columns=fc_zscore_ids)
 
         log_.info('Writing output file paired results')
         write_drugZ_output(outfile=args.drugz_output_file, output=gene_normZ)
+        
+        tot_time = str(round((time.time()-start),2))
+        log_.info('Completed in {0} seconds'.format(tot_time))
+        
     if args.unpaired == True:
         return gene_normZ2
     else:
