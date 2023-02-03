@@ -3,7 +3,6 @@
 #VERSION = "1.0.0"
 
 #---------------------------------
-
 # IsogenicZ is an adaptation of DrugZ to analyze parallel isogenic screens.
 # Instead of analyzing paired treated/untreated end-point samples, artificial
 # end-point samples are created by normalizing to the corresponding t=0 samples
