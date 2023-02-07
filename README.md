@@ -1,5 +1,5 @@
 # IsogenicZ
-Isogenicz is an adapted version of the DrugZ software from the Hart Lab, below the DrugZ readme.md edited where appropriate: 
+IsogenicZ is an adapted version of the DrugZ software from the Hart Lab, below the DrugZ readme.md edited where appropriate: 
   
 IsogenicZ analyzes parallel isogenic CRISPR screens for synthetic lethal interactions.  
 
