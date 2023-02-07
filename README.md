@@ -26,7 +26,7 @@ usage: isogenicz.py [-h] [-i sgRNA_count.txt] [-o isogenicz-output.txt]
 -unpaired Unpaired approach: compares mean(treated samples) to mean(control samples) (default=False)
 ```
   
-The input file should be a tab-delimited file with the following format:
+The input file should be a tab-delimited file with the following format (order of sample columns or unused columns have no effect):
 
 ```
 sgRNA	Gene	WTt0_1	WTt0_2	WTt0_3	WTt12_1	WTt12_2	WTt12_3	MUTt0_1	MUTt0_2	MUTt0_3	MUTt12_1	MUTt12_2	MUTt12_3
