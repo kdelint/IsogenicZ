@@ -11,7 +11,9 @@ This normalization method was used for analysis of pooled full genome CRISPR scr
 research papers:
 
 [ELOF1 is a transcription-coupled DNA repair factor that directs RNA polymerase II ubiquitylation](https://pubmed.ncbi.nlm.nih.gov/34108663/)
+
 [MMS22L-TONSL functions in sister chromatid cohesion in a pathway parallel to DSCC1-RFC](https://pubmed.ncbi.nlm.nih.gov/36622344/)
+
 [CRISPR screens in sister chromatid cohesion defective cells reveal PAXIP1-PAGR1 as regulator of chromatin association of cohesin](https://www.biorxiv.org/content/10.1101/2022.12.23.521474v1)
 
 Below the DrugZ readme.md edited where appropriate: 
