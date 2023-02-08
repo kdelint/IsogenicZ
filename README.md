@@ -1,5 +1,20 @@
 # IsogenicZ
-IsogenicZ is an adapted version of the DrugZ software from the Hart Lab, below the DrugZ readme.md edited where appropriate: 
+IsogenicZ is an adapted version of the DrugZ software from the Hart Lab. For paired analysis such as 
+a CRISPR drug screen, DrugZ analyses two endpoint samples per replicate as input. IsogenicZ uses two 
+endpoint samples (wildtype vs. isogenic mutant) and the two corresponding t0 samples per replicate as 
+input. All samples are normalized to an equal read number, and per replicate (endpoint/t0) fold 
+changes are calculated for wildtype and isogenic mutant, and multiplied by the combined wildtype and
+isogenic mutant to yield t0-corrected endpoint samples. These samples are then analyzed using the 
+standard DrugZ analysis. 
+
+This normalization method was used for analysis of pooled full genome CRISPR screens in multiple
+research papers:
+
+[ELOF1 is a transcription-coupled DNA repair factor that directs RNA polymerase II ubiquitylation](https://pubmed.ncbi.nlm.nih.gov/34108663/)
+[MMS22L-TONSL functions in sister chromatid cohesion in a pathway parallel to DSCC1-RFC](https://pubmed.ncbi.nlm.nih.gov/36622344/)
+[CRISPR screens in sister chromatid cohesion defective cells reveal PAXIP1-PAGR1 as regulator of chromatin association of cohesin](https://www.biorxiv.org/content/10.1101/2022.12.23.521474v1)
+
+Below the DrugZ readme.md edited where appropriate: 
   
 IsogenicZ analyzes parallel isogenic CRISPR screens for synthetic lethal interactions.  
 
