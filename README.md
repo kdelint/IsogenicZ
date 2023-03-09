@@ -1,13 +1,13 @@
 # IsogenicZ
-IsogenicZ is an adapted version of the DrugZ software from the Hart Lab. For paired analysis such as 
-a CRISPR drug screen, DrugZ analyses two endpoint samples per replicate as input. IsogenicZ uses two 
-endpoint samples (wildtype vs. isogenic mutant) and the two corresponding t0 samples per replicate as 
-input. All samples are normalized to an equal total read number, and per replicate (endpoint/t0) fold 
-changes are calculated for wildtype and isogenic mutant, and multiplied by the combined wildtype and
-isogenic mutant to yield t0-corrected endpoint samples. These samples are then analyzed using the 
-standard DrugZ analysis. 
+IsogenicZ is an adapted version of the DrugZ software from the Hart Lab. For paired analysis such as a  
+CRISPR drug screen, DrugZ analyses two endpoint samples per replicate as input. IsogenicZ uses two  
+endpoint samples (wildtype vs. isogenic mutant) and the two corresponding t0 samples per replicate as  
+input. All samples are normalized to an equal total read number, and per replicate (endpoint/t0) fold  
+changes for each sgRNA are calculated for wildtype and isogenic mutant, multiplied by the combined  
+wildtype and isogenic mutant t0 count, and normalized to equal read numbers again to yield t0-corrected  
+endpoint samples. These samples are then analyzed using the standard DrugZ analysis. 
 
-This normalization method was used for analysis of pooled full genome CRISPR screens in multiple
+This normalization method was used for analysis of pooled full genome CRISPR screens in multiple  
 research papers:
 
 [ELOF1 is a transcription-coupled DNA repair factor that directs RNA polymerase II ubiquitylation](https://pubmed.ncbi.nlm.nih.gov/34108663/)
