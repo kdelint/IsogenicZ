@@ -14,7 +14,7 @@ research papers:
 
 [MMS22L-TONSL functions in sister chromatid cohesion in a pathway parallel to DSCC1-RFC](https://pubmed.ncbi.nlm.nih.gov/36622344/)
 
-[CRISPR screens in sister chromatid cohesion defective cells reveal PAXIP1-PAGR1 as regulator of chromatin association of cohesin](https://www.biorxiv.org/content/10.1101/2022.12.23.521474v1)
+[CRISPR screens in sister chromatid cohesion defective cells reveal PAXIP1-PAGR1 as regulator of chromatin association of cohesin](https://pubmed.ncbi.nlm.nih.gov/37702151/)
 
 Below the DrugZ readme.md edited where appropriate: 
   
